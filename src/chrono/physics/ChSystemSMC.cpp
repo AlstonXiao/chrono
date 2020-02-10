@@ -23,7 +23,7 @@
 #include "chrono/physics/ChContactContainerSMC.h"
 
 #include "chrono/solver/ChSystemDescriptor.h"
-#include "chrono/solver/ChSolverSMC.h"
+#include "chrono/solver/ChIterativeSolverLS.h"
 
 #include "chrono/collision/ChCCollisionSystemBullet.h"
 
@@ -40,10 +40,8 @@ ChSystemSMC::ChSystemSMC(bool use_material_properties, unsigned int max_objects,
       m_tdispl_model(OneStep),
       m_stiff_contact(false) {
     descriptor = chrono_types::make_shared<ChSystemDescriptor>();
-    descriptor->SetNumThreads(parallel_thread_number);
 
-    solver_speed = chrono_types::make_shared<ChSolverSMC>();
-    solver_stab = chrono_types::make_shared<ChSolverSMC>();
+    SetSolverType(ChSolver::Type::PSOR);
 
     collision_system = chrono_types::make_shared<collision::ChCollisionSystemBullet>(max_objects, scene_size);
 
@@ -78,11 +76,14 @@ class my_enum_mappers : public ChSystemSMC {
     CH_ENUM_MAPPER_BEGIN(ContactForceModel);
     CH_ENUM_VAL(Hooke);
     CH_ENUM_VAL(Hertz);
+    CH_ENUM_VAL(PlainCoulomb);
+    CH_ENUM_VAL(Flores)
     CH_ENUM_MAPPER_END(ContactForceModel);
 
     CH_ENUM_MAPPER_BEGIN(AdhesionForceModel);
     CH_ENUM_VAL(Constant);
     CH_ENUM_VAL(DMT);
+    CH_ENUM_VAL(Perko);
     CH_ENUM_MAPPER_END(AdhesionForceModel);
 
     CH_ENUM_MAPPER_BEGIN(TangentialDisplacementModel);

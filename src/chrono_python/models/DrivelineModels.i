@@ -21,9 +21,11 @@
 #include "chrono_vehicle/wheeled_vehicle/driveline/ChShaftsDriveline2WD.h"
 #include "chrono_vehicle/wheeled_vehicle/driveline/ChShaftsDriveline4WD.h"
 #include "chrono_vehicle/wheeled_vehicle/driveline/ChSimpleDriveline.h"
+#include "chrono_vehicle/wheeled_vehicle/driveline/ChSimpleDrivelineXWD.h"
 #include "chrono_vehicle/wheeled_vehicle/driveline/ShaftsDriveline2WD.h"
 #include "chrono_vehicle/wheeled_vehicle/driveline/SimpleDriveline.h"
 #include "chrono_vehicle/wheeled_vehicle/driveline/ShaftsDriveline4WD.h"
+#include "chrono_vehicle/wheeled_vehicle/driveline/SimpleDrivelineXWD.h"
 
 #include "chrono_models/vehicle/generic/Generic_Driveline2WD.h"
 #include "chrono_models/vehicle/generic/Generic_SimpleDriveline.h"
@@ -36,6 +38,11 @@
 
 #include "chrono_models/vehicle/citybus/CityBus_Driveline2WD.h"
 
+#include "chrono_models/vehicle/man/MAN_5t_SimpleDriveline.h"
+#include "chrono_models/vehicle/man/MAN_5t_SimpleDrivelineXWD.h"
+
+#include "chrono_models/vehicle/uaz/UAZBUS_Driveline4WD.h"
+#include "chrono_models/vehicle/uaz/UAZBUS_Driveline2WD.h"
 %}
 
 
@@ -46,10 +53,13 @@
 %shared_ptr(chrono::vehicle::hmmwv::HMMWV_SimpleDriveline)
 %shared_ptr(chrono::vehicle::sedan::Sedan_Driveline2WD)
 %shared_ptr(chrono::vehicle::citybus::CityBus_Driveline2WD)
-
+%shared_ptr(chrono::vehicle::man::MAN_5t_SimpleDriveline)
+%shared_ptr(chrono::vehicle::man::MAN_5t_SimpleDrivelineXWD)
+%shared_ptr(chrono::vehicle::uaz::UAZBUS_Driveline2WD)
+%shared_ptr(chrono::vehicle::uaz::UAZBUS_Driveline4WD)
 
 /* Parse the header file to generate wrappers */
-%import "ChDrivelineWV.i"
+%import "ChDriveline.i"
 
 // Model:
 %include "../chrono_models/vehicle/generic/Generic_Driveline2WD.h"
@@ -62,3 +72,9 @@
 %include "../chrono_models/vehicle/sedan/Sedan_Driveline2WD.h"
 
 %include "../chrono_models/vehicle/citybus/CityBus_Driveline2WD.h"
+
+%include "../chrono_models/vehicle/man/MAN_5t_SimpleDriveline.h"
+%include "../chrono_models/vehicle/man/MAN_5t_SimpleDrivelineXWD.h"
+
+%include "../chrono_models/vehicle/uaz/UAZBUS_Driveline2WD.h"
+%include "../chrono_models/vehicle/uaz/UAZBUS_Driveline4WD.h"

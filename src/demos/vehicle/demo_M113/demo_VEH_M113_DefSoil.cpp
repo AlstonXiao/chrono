@@ -103,8 +103,8 @@ int main(int argc, char* argv[]) {
     if (use_mkl) {
 #ifdef CHRONO_MKL
         GetLog() << "Using MKL solver\n";
-        auto mkl_solver = chrono_types::make_shared<ChSolverMKL<>>();
-        mkl_solver->SetSparsityPatternLock(true);
+        auto mkl_solver = chrono_types::make_shared<ChSolverMKL>();
+        mkl_solver->LockSparsityPattern(true);
         vehicle.GetSystem()->SetSolver(mkl_solver);
 
         vehicle.GetSystem()->SetTimestepperType(ChTimestepper::Type::HHT);
@@ -118,8 +118,7 @@ int main(int argc, char* argv[]) {
         integrator->SetVerbose(true);
 #endif
     } else {
-        vehicle.GetSystem()->SetMaxItersSolverSpeed(50);
-        vehicle.GetSystem()->SetMaxItersSolverStab(50);
+        vehicle.GetSystem()->SetSolverMaxIterations(50);
     }
 
     // Control steering type (enable crossdrive capability)
@@ -149,16 +148,15 @@ int main(int argc, char* argv[]) {
 
     // Create the terrain
     SCMDeformableTerrain terrain(vehicle.GetSystem());
-    terrain.SetPlane(ChCoordsys<>(VNULL, Q_from_AngX(CH_C_PI_2)));
-    terrain.SetSoilParametersSCM(2e7,   // Bekker Kphi
-                                 0,     // Bekker Kc
-                                 1.1,   // Bekker n exponent
-                                 0,     // Mohr cohesive limit (Pa)
-                                 20,    // Mohr friction limit (degrees)
-                                 0.01,  // Janosi shear coefficient (m)
-                                 2e8,   // Elastic stiffness (Pa/m), before plastic yield
-                                 3e4    // Damping (Pa s/m), proportional to negative vertical speed (optional)
-                                 );
+    terrain.SetSoilParameters(2e7,   // Bekker Kphi
+                              0,     // Bekker Kc
+                              1.1,   // Bekker n exponent
+                              0,     // Mohr cohesive limit (Pa)
+                              20,    // Mohr friction limit (degrees)
+                              0.01,  // Janosi shear coefficient (m)
+                              2e8,   // Elastic stiffness (Pa/m), before plastic yield
+                              3e4    // Damping (Pa s/m), proportional to negative vertical speed (optional)
+    );
 
     terrain.SetAutomaticRefinement(true);
     terrain.SetAutomaticRefinementResolution(0.04);

@@ -29,7 +29,8 @@ namespace vehicle {
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-Pac02Tire::Pac02Tire(const std::string& filename) : ChPac02Tire(""), m_mass(0), m_has_mesh(false) {
+Pac02Tire::Pac02Tire(const std::string& filename)
+    : ChPac02Tire(""), m_mass(0), m_has_mesh(false), m_has_vert_table(false), m_has_bott_table(false) {
     Document d = ReadFileJSON(filename);
     if (d.IsNull())
         return;
@@ -39,14 +40,14 @@ Pac02Tire::Pac02Tire(const std::string& filename) : ChPac02Tire(""), m_mass(0), 
     GetLog() << "Loaded JSON: " << filename.c_str() << "\n";
 }
 
-Pac02Tire::Pac02Tire(const rapidjson::Document& d) : ChPac02Tire(""), m_mass(0), m_has_mesh(false) {
+Pac02Tire::Pac02Tire(const rapidjson::Document& d)
+    : ChPac02Tire(""), m_mass(0), m_has_mesh(false), m_has_vert_table(false), m_has_bott_table(false) {
     Create(d);
 }
 
 void Pac02Tire::Create(const rapidjson::Document& d) {  // Invoke base class method.
     ChPart::Create(d);
 
-    m_has_vert_table = false;
     m_mass = d["Mass"].GetDouble();
     m_inertia = ReadVectorJSON(d["Inertia"]);
     if (d.HasMember("Use Mode")) {
@@ -90,6 +91,14 @@ void Pac02Tire::Create(const rapidjson::Document& d) {  // Invoke base class met
                                     d["Vertical"]["Vertical Curve Data"][i][1u].GetDouble());
             }
             m_has_vert_table = true;
+        }
+        if (d["Vertical"].HasMember("Bottoming Curve Data")) {
+            int num_points = d["Vertical"]["Bottoming Curve Data"].Size();
+            for (int i = 0; i < num_points; i++) {
+                m_vert_map.AddPoint(d["Vertical"]["Bottoming Curve Data"][i][0u].GetDouble(),
+                                    d["Vertical"]["Bottoming Curve Data"][i][1u].GetDouble());
+            }
+            m_has_bott_table = true;
         }
     }
     if (d.HasMember("Scaling Factors")) {
@@ -526,9 +535,9 @@ void Pac02Tire::Create(const rapidjson::Document& d) {  // Invoke base class met
     m_visualization_width = m_PacCoeff.width;
     // Check how to visualize this tire.
     if (d.HasMember("Visualization")) {
-        if (d["Visualization"].HasMember("Mesh Filename")) {
-            m_meshFile = d["Visualization"]["Mesh Filename"].GetString();
-            m_meshName = d["Visualization"]["Mesh Name"].GetString();
+        if (d["Visualization"].HasMember("Mesh Filename Left") && d["Visualization"].HasMember("Mesh Filename Right")) {
+            m_meshFile_left = d["Visualization"]["Mesh Filename Left"].GetString();
+            m_meshFile_right = d["Visualization"]["Mesh Filename Right"].GetString();
             m_has_mesh = true;
         }
 
@@ -540,13 +549,8 @@ void Pac02Tire::Create(const rapidjson::Document& d) {  // Invoke base class met
 
 void Pac02Tire::AddVisualizationAssets(VisualizationType vis) {
     if (vis == VisualizationType::MESH && m_has_mesh) {
-        auto trimesh = chrono_types::make_shared<geometry::ChTriangleMeshConnected>();
-        trimesh->LoadWavefrontMesh(vehicle::GetDataFile(m_meshFile), false, false);
-        m_trimesh_shape = chrono_types::make_shared<ChTriangleMeshShape>();
-        m_trimesh_shape->SetMesh(trimesh);
-        m_trimesh_shape->SetName(m_meshName);
-        m_trimesh_shape->SetStatic(true);
-        m_wheel->GetSpindle()->AddAsset(m_trimesh_shape);
+        m_trimesh_shape = AddVisualizationMesh(vehicle::GetDataFile(m_meshFile_left),    // left side
+                                               vehicle::GetDataFile(m_meshFile_right));  // right side
     } else {
         ChPac02Tire::AddVisualizationAssets(vis);
     }
@@ -554,14 +558,8 @@ void Pac02Tire::AddVisualizationAssets(VisualizationType vis) {
 
 void Pac02Tire::RemoveVisualizationAssets() {
     ChPac02Tire::RemoveVisualizationAssets();
-
-    // Make sure we only remove the assets added by Pac02Tire::AddVisualizationAssets.
-    // This is important for the ChTire object because a wheel may add its own assets
-    // to the same body (the spindle/wheel).
-    auto& assets = m_wheel->GetSpindle()->GetAssets();
-    auto it = std::find(assets.begin(), assets.end(), m_trimesh_shape);
-    if (it != assets.end())
-        assets.erase(it);
+    RemoveVisualizationMesh(m_trimesh_shape);
 }
+
 }  // namespace vehicle
 }  // namespace chrono

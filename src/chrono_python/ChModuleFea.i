@@ -69,9 +69,11 @@
 #include "chrono/fea/ChElementShell.h"
 #include "chrono/fea/ChMaterialShellReissner.h"
 #include "chrono/fea/ChMaterialShellANCF.h"
+#include "chrono/fea/ChMaterialShellKirchhoff.h"
 #include "chrono/fea/ChElementShellReissner4.h"
 #include "chrono/fea/ChElementShellANCF.h"
 #include "chrono/fea/ChElementShellANCF_8.h"
+#include "chrono/fea/ChElementShellBST.h"
 #include "chrono/fea/ChElementCableANCF.h"
 #include "chrono/fea/ChBuilderBeam.h"
 #include "chrono/fea/ChMesh.h"
@@ -83,6 +85,13 @@
 #include "chrono/fea/ChContactSurfaceNodeCloud.h"
 #include "chrono/fea/ChMeshSurface.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
+#include "chrono/physics/ChLoad.h"
+#include "chrono/physics/ChLoadsBody.h"
+#include "chrono/physics/ChLoadsXYZnode.h"
+#include "chrono/physics/ChLoader.h"
+#include "chrono/physics/ChLoaderU.h"
+#include "chrono/physics/ChLoaderUV.h"
+#include "chrono/physics/ChLoaderUVW.h"
 #include "chrono/fea/ChLoadsBeam.h"
 #include "chrono/fea/ChLinkDirFrame.h"
 #include "chrono/fea/ChLinkPointFrame.h"
@@ -96,18 +105,17 @@ using namespace chrono::fea;
 
 %}
 
-
-// Undefine ChApiFea otherwise SWIG gives a syntax error
-#define ChApiFea 
+// Undefine ChApi otherwise SWIG gives a syntax error
 #define ChApi
 #define EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+#define CH_DEPRECATED(msg)
 
 // workaround for trouble
 %ignore chrono::fea::ChContactNodeXYZ::ComputeJacobianForContactPart;
 %ignore chrono::fea::ChContactTriangleXYZ::ComputeJacobianForContactPart;
 %ignore chrono::fea::ChContactNodeXYZROT::ComputeJacobianForContactPart;
 %ignore chrono::fea::ChContactTriangleXYZROT::ComputeJacobianForContactPart;
-
+%ignore chrono::fea::ChElementShellBST::ComputeInternalJacobians;
 %ignore chrono::fea::ChElementBrick::MyMass;
 %ignore chrono::fea::ChElementBrick::MyGravity;
 %ignore chrono::fea::ChElementBrick::MyForceAnalytical;
@@ -155,6 +163,11 @@ using namespace chrono::fea;
 %shared_ptr(chrono::ChLoadCustomMultiple)
 %shared_ptr(chrono::ChNodeBase) 
 %shared_ptr(chrono::ChNodeXYZ) 
+
+%shared_ptr(chrono::ChLoad< chrono::fea::ChLoaderBeamWrench>)
+%shared_ptr(chrono::ChLoad< chrono::fea::ChLoaderBeamWrenchDistributed>)
+
+
 //from this module:
 %shared_ptr(chrono::fea::ChContinuumMaterial)
 %shared_ptr(chrono::fea::ChContinuumElastic)
@@ -196,7 +209,6 @@ using namespace chrono::fea;
 %shared_ptr(chrono::fea::ChElementGeneric)
 %shared_ptr(chrono::fea::ChElementSpring)
 %shared_ptr(chrono::fea::ChElementBar)
-%shared_ptr(chrono::fea::ChElement3D)
 %shared_ptr(chrono::fea::ChElementCorotational)
 %shared_ptr(chrono::fea::ChElementTetrahedron)
 %shared_ptr(chrono::fea::ChElementTetra_4)
@@ -229,10 +241,23 @@ using namespace chrono::fea;
 %shared_ptr(chrono::fea::ChMaterialShellReissner)
 %shared_ptr(chrono::fea::ChMaterialShellReissnerIsothropic)
 %shared_ptr(chrono::fea::ChMaterialShellReissnerOrthotropic)
+%shared_ptr(chrono::fea::ChElasticityReissner)
+%shared_ptr(chrono::fea::ChElasticityReissnerIsothropic)
+%shared_ptr(chrono::fea::ChElasticityReissnerOrthotropic)
+%shared_ptr(chrono::fea::ChElasticityReissnerGeneric)
+%shared_ptr(chrono::fea::ChPlasticityReissner)
+%shared_ptr(chrono::fea::ChMaterialShellKirchhoff)
+%shared_ptr(chrono::fea::ChElasticityKirchhoff)
+%shared_ptr(chrono::fea::ChElasticityKirchhoffIsothropic)
+%shared_ptr(chrono::fea::ChElasticityKirchhoffOrthotropic)
+%shared_ptr(chrono::fea::ChElasticityKirchhoffGeneric)
+%shared_ptr(chrono::fea::ChPlasticityKirchhoff)
+%shared_ptr(chrono::fea::ChDampingKirchhoff)
 %shared_ptr(chrono::fea::ChElementShell)
 %shared_ptr(chrono::fea::ChElementShellReissner4)
 %shared_ptr(chrono::fea::ChElementShellANCF)
 %shared_ptr(chrono::fea::ChElementShellANCF_8)
+%shared_ptr(chrono::fea::ChElementShellBST)
 %shared_ptr(chrono::fea::ChElementCableANCF)
 %shared_ptr(chrono::fea::ChBuilderBeam)
 %shared_ptr(chrono::fea::ChBuilderBeamIGA)
@@ -288,15 +313,19 @@ using namespace chrono::fea;
 %feature("director") chrono::ChLoadableUV;
 %feature("director") chrono::ChLoadableUVW;
 %import(module = "pychrono.core") "ChLoadable.i" // disable because strange error in cxx
-%import(module = "pychrono.core") "../chrono/physics/ChLoad.h"
+%import(module = "pychrono.core") "ChLoader.i"
+%import(module = "pychrono.core") "ChLoad.i"
 %import(module = "pychrono.core") "../chrono/physics/ChNodeBase.h"
 %import(module = "pychrono.core") "../chrono/physics/ChNodeXYZ.h"
 %import(module = "pychrono.core") "ChContactContainer.i"
 
+%template(LoadLoaderBeamWrench) chrono::ChLoad< chrono::fea::ChLoaderBeamWrench>;
+%template(LoadLoaderBeamWrenchDistributed) chrono::ChLoad< chrono::fea::ChLoaderBeamWrenchDistributed>;
 
 //  core/  classes
 %include "../chrono/physics/ChPhysicsItem.h"
 %include "../chrono/fea/ChContinuumMaterial.h"
+// TODO: if eigen::ref can be wrapped, unignore these,
 %ignore chrono::fea::ChNodeFEAbase::ComputeKRMmatricesGlobal;
 %include "../chrono/fea/ChNodeFEAbase.h"
 %include "../chrono/fea/ChNodeFEAxyz.h"
@@ -304,14 +333,13 @@ using namespace chrono::fea;
 %include "../chrono/fea/ChNodeFEAxyzD.h"
 %include "../chrono/fea/ChNodeFEAxyzDD.h"
 %include "../chrono/fea/ChNodeFEAxyzrot.h"
-// TODO: if eigen::ref can be wrapped, unignore these, ChMaterialShellReissner CTangent and ChNodeFEAbase matrix
+// TODO: if eigen::ref can be wrapped, unignore these
 %ignore chrono::fea::ChElementBase::ComputeKRMmatricesGlobal;
 %ignore chrono::fea::ChElementBase::ComputeMmatrixGlobal;
 %include "../chrono/fea/ChElementBase.h"
 %include "../chrono/fea/ChElementGeneric.h"
 %include "../chrono/fea/ChElementBar.h"
 %include "../chrono/fea/ChElementSpring.h"
-%include "../chrono/fea/ChElement3D.h"
 %include "../chrono/fea/ChElementCorotational.h"
 %include "../chrono/fea/ChBeamSection.h"
 %include "../chrono/fea/ChBeamSectionCosserat.h"
@@ -328,12 +356,21 @@ using namespace chrono::fea;
 %include "../chrono/fea/ChElementHexahedron.h"		
 %include "../chrono/fea/ChElementHexa_8.h"
 %include "../chrono/fea/ChElementHexa_20.h"
-
 %include "../chrono/fea/ChElementBrick.h"
 %include "../chrono/fea/ChElementBrick_9.h"
 %include "../chrono/fea/ChMaterialShellANCF.h"
-%ignore chrono::fea::ChMaterialShellReissner::ComputeTangentC;
+// TODO: if eigen::ref can be wrapped, unignore these,
+%ignore chrono::fea::ChElasticityReissner::ComputeStiffnessMatrix;
+%ignore chrono::fea::ChPlasticityReissner::ComputeStiffnessMatrixElastoplastic;
+%ignore chrono::fea::ChDampingReissner::ComputeDampingMatrix;
+%ignore chrono::fea::ChMaterialShellReissner::ComputeStiffnessMatrix;
 %include "../chrono/fea/ChMaterialShellReissner.h"
+// TODO: if eigen::ref can be wrapped, unignore these,
+%ignore chrono::fea::ChElasticityKirchhoff::ComputeStiffnessMatrix;
+%ignore chrono::fea::ChPlasticityKirchhoff::ComputeStiffnessMatrixElastoplastic;
+%ignore chrono::fea::ChDampingKirchhoff::ComputeDampingMatrix;
+%ignore chrono::fea::ChMaterialShellKirchhoff::ComputeStiffnessMatrix;
+%include "../chrono/fea/ChMaterialShellKirchhoff.h"
 %include "../chrono/fea/ChElementShell.h"
 %rename(ShellReissner4Layer) chrono::fea::ChElementShellReissner4::Layer;
 %include "../chrono/fea/ChElementShellReissner4.h"
@@ -341,6 +378,8 @@ using namespace chrono::fea;
 %include "../chrono/fea/ChElementShellANCF.h"
 %rename(ShellANCF_8Layer) chrono::fea::ChElementShellANCF_8::Layer;
 %include "../chrono/fea/ChElementShellANCF_8.h"
+%rename(ShellBSTLayer) chrono::fea::ChElementShellBST::Layer;
+%include "../chrono/fea/ChElementShellBST.h"
 %include "../chrono/fea/ChElementCableANCF.h"
 %include "../chrono/fea/ChContactSurface.h"
 %include "../chrono/fea/ChContactSurfaceMesh.h"
@@ -354,6 +393,8 @@ using namespace chrono::fea;
 %include "../chrono/fea/ChLinkPointFrame.h"
 %include "../chrono/fea/ChLinkPointPoint.h"
 %include "../chrono/fea/ChLoadsBeam.h"
+//%template(LoadLoaderBeamWrench) chrono::ChLoad< chrono::fea::ChLoaderBeamWrench >;
+%include "../chrono/fea/ChMesh.h"
 %include "../chrono/fea/ChBuilderBeam.h"
 %include "../chrono/fea/ChMeshFileLoader.h"
 
@@ -377,6 +418,12 @@ using namespace chrono::fea;
 %DefSharedPtrDynamicDowncast(chrono::fea,ChElasticityCosserat,ChElasticityCosseratAdvanced)
 %DefSharedPtrDynamicDowncast(chrono::fea,ChElasticityCosserat,ChElasticityCosseratMesh)
 %DefSharedPtrDynamicDowncast(chrono::fea,ChPlasticityCosserat,ChPlasticityCosseratLumped)
+%DefSharedPtrDynamicDowncast(chrono::fea,ChElasticityReissner,ChElasticityReissnerIsothropic)
+%DefSharedPtrDynamicDowncast(chrono::fea,ChElasticityReissner,ChElasticityReissnerOrthotropic)
+%DefSharedPtrDynamicDowncast(chrono::fea,ChElasticityReissner,ChElasticityReissnerGeneric)
+%DefSharedPtrDynamicDowncast(chrono::fea,ChElasticityKirchhoff,ChElasticityKirchhoffIsothropic)
+%DefSharedPtrDynamicDowncast(chrono::fea,ChElasticityKirchhoff,ChElasticityKirchhoffOrthotropic)
+%DefSharedPtrDynamicDowncast(chrono::fea,ChElasticityKirchhoff,ChElasticityKirchhoffGeneric)
 %DefSharedPtrDynamicDowncast(chrono::fea,ChElementBase,ChElementBar)
 %DefSharedPtrDynamicDowncast(chrono::fea,ChElementBase,ChElementSpring)
 %DefSharedPtrDynamicDowncast(chrono::fea,ChElementBase,ChElementTetra_4)

@@ -19,17 +19,15 @@
 #ifndef PAC02_TIRE_H
 #define PAC02_TIRE_H
 
-
 #include "chrono_vehicle/wheeled_vehicle/tire/ChPac02Tire.h"
 #include "chrono_vehicle/ChApiVehicle.h"
-#include "chrono/assets/ChTriangleMeshShape.h"
 
 #include "chrono_thirdparty/rapidjson/document.h"
 
 namespace chrono {
 namespace vehicle {
 
-/// @addtogroup vehicle_models_hmmwv
+/// @addtogroup vehicle_wheeled_tire
 /// @{
 
 /// PAC89 tire model from JSON file.
@@ -41,11 +39,20 @@ class CH_VEHICLE_API Pac02Tire : public ChPac02Tire {
 
     virtual double GetNormalStiffnessForce(double depth) const override {
         if (m_has_vert_table) {
-            return m_vert_map.Get_y(depth);
+            if (m_has_bott_table) {
+                return m_vert_map.Get_y(depth) + m_bott_map.Get_y(depth);
+            } else {
+                return m_vert_map.Get_y(depth);
+            }
         } else {
-            return m_PacCoeff.Cz * depth;
+            if (m_has_bott_table) {
+                return m_PacCoeff.Cz * depth + m_bott_map.Get_y(depth);
+            } else {
+                return m_PacCoeff.Cz * depth;
+            }
         }
     }
+
     virtual double GetNormalDampingForce(double depth, double velocity) const override {
         return m_PacCoeff.Kz * velocity;
     }
@@ -65,16 +72,22 @@ class CH_VEHICLE_API Pac02Tire : public ChPac02Tire {
     double m_mass;
     ChVector<> m_inertia;
     bool m_has_mesh;
+
+    // tire vertical stiffness given as lookup table
     bool m_has_vert_table;
     ChFunction_Recorder m_vert_map;
 
+    // tire bottoming stiffness given as lookup table (rim impact)
+    bool m_has_bott_table;
+    ChFunction_Recorder m_bott_map;
+
     double m_visualization_width;
-    std::string m_meshName;
-    std::string m_meshFile;
+    std::string m_meshFile_left;
+    std::string m_meshFile_right;
     std::shared_ptr<ChTriangleMeshShape> m_trimesh_shape;
 };
 
-/// @} vehicle_models_hmmwv
+/// @} vehicle_wheeled_tire
 
 }  // namespace vehicle
 }  // end namespace chrono

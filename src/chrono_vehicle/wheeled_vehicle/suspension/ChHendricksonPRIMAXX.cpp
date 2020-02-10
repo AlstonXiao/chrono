@@ -23,6 +23,8 @@
 // suspension and will be mirrored (reflecting the y coordinates) to construct
 // the right side.
 //
+// TODO: connect transverse beam with universal joint?!?
+//
 // =============================================================================
 
 #include "chrono/assets/ChCylinderShape.h"
@@ -53,8 +55,7 @@ const std::string ChHendricksonPRIMAXX::m_pointNames[] = {"SPINDLE ",
                                                           "SHOCKLB_LB",
                                                           "KNUCKLE_CM",
                                                           "TORQUEROD_CM",
-                                                          "LOWERBEAM_CM",
-                                                          "TRANSVERSEBEAM_CM"};
+                                                          "LOWERBEAM_CM"};
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
@@ -260,14 +261,14 @@ void ChHendricksonPRIMAXX::InitializeSide(VehicleSide side,
     chassis->GetSystem()->AddLink(m_revolute[side]);
 
     // Create and initialize the spring/damper between axle housing and chassis
-    m_shockAH[side] = chrono_types::make_shared<ChLinkSpringCB>();
+    m_shockAH[side] = chrono_types::make_shared<ChLinkTSDA>();
     m_shockAH[side]->SetNameString(m_name + "_shockAH" + suffix);
     m_shockAH[side]->Initialize(chassis, m_axlehousing, false, points[SHOCKAH_C], points[SHOCKAH_AH]);
     m_shockAH[side]->RegisterForceFunctor(getShockAHForceCallback());
     chassis->GetSystem()->AddLink(m_shockAH[side]);
 
     // Create and initialize the spring/damper between lower beam and chassis
-    m_shockLB[side] = chrono_types::make_shared<ChLinkSpringCB>();
+    m_shockLB[side] = chrono_types::make_shared<ChLinkTSDA>();
     m_shockLB[side]->SetNameString(m_name + "_shockLB" + suffix);
     m_shockLB[side]->Initialize(chassis, m_axlehousing, false, points[SHOCKLB_C], points[SHOCKLB_LB]);
     m_shockLB[side]->RegisterForceFunctor(getShockLBForceCallback());
@@ -330,6 +331,23 @@ ChVector<> ChHendricksonPRIMAXX::GetCOMPos() const {
 // -----------------------------------------------------------------------------
 double ChHendricksonPRIMAXX::GetTrack() {
     return 2 * getLocation(SPINDLE).y();
+}
+
+// -----------------------------------------------------------------------------
+// Return current suspension forces
+// -----------------------------------------------------------------------------
+ChSuspension::Force ChHendricksonPRIMAXX::ReportSuspensionForce(VehicleSide side) const {
+    ChSuspension::Force force;
+
+    force.spring_force = m_shockLB[side]->GetForce();
+    force.spring_length = m_shockLB[side]->GetLength();
+    force.spring_velocity = m_shockLB[side]->GetVelocity();
+
+    force.shock_force = m_shockAH[side]->GetForce();
+    force.shock_length = m_shockAH[side]->GetLength();
+    force.shock_velocity = m_shockAH[side]->GetVelocity();
+
+    return force;
 }
 
 // -----------------------------------------------------------------------------
@@ -442,10 +460,16 @@ void ChHendricksonPRIMAXX::AddVisualizationAssets(VisualizationType vis) {
 
     // Add visualization for the springs and shocks
     m_shockLB[LEFT]->AddAsset(chrono_types::make_shared<ChPointPointSpring>(0.06, 150, 15));
+    m_shockLB[LEFT]->AddAsset(chrono_types::make_shared<ChPointPointSegment>());
+
     m_shockLB[RIGHT]->AddAsset(chrono_types::make_shared<ChPointPointSpring>(0.06, 150, 15));
+    m_shockLB[RIGHT]->AddAsset(chrono_types::make_shared<ChPointPointSegment>());
 
     m_shockAH[LEFT]->AddAsset(chrono_types::make_shared<ChPointPointSpring>(0.06, 150, 15));
+    m_shockAH[LEFT]->AddAsset(chrono_types::make_shared<ChPointPointSegment>());
+
     m_shockAH[RIGHT]->AddAsset(chrono_types::make_shared<ChPointPointSpring>(0.06, 150, 15));
+    m_shockAH[RIGHT]->AddAsset(chrono_types::make_shared<ChPointPointSegment>());
 
     // Add visualization for the tie-rods
     m_distTierod[LEFT]->AddAsset(chrono_types::make_shared<ChPointPointSegment>());
@@ -614,7 +638,7 @@ void ChHendricksonPRIMAXX::ExportComponentList(rapidjson::Document& jsonDocument
     joints.push_back(m_distTierod[1]);
     ChPart::ExportJointList(jsonDocument, joints);
 
-    std::vector<std::shared_ptr<ChLinkSpringCB>> springs;
+    std::vector<std::shared_ptr<ChLinkTSDA>> springs;
     springs.push_back(m_shockLB[0]);
     springs.push_back(m_shockLB[1]);
     springs.push_back(m_shockAH[0]);
@@ -663,7 +687,7 @@ void ChHendricksonPRIMAXX::Output(ChVehicleOutput& database) const {
     joints.push_back(m_distTierod[1]);
     database.WriteJoints(joints);
 
-    std::vector<std::shared_ptr<ChLinkSpringCB>> springs;
+    std::vector<std::shared_ptr<ChLinkTSDA>> springs;
     springs.push_back(m_shockLB[0]);
     springs.push_back(m_shockLB[1]);
     springs.push_back(m_shockAH[0]);

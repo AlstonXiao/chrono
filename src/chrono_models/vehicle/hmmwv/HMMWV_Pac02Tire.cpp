@@ -36,12 +36,13 @@ namespace hmmwv {
 const double HMMWV_Pac02Tire::m_mass = 37.6;
 const ChVector<> HMMWV_Pac02Tire::m_inertia(3.75635, 6.52582, 3.75635);
 
-const std::string HMMWV_Pac02Tire::m_meshName = "hmmwv_tire_POV_geom";
-const std::string HMMWV_Pac02Tire::m_meshFile = "hmmwv/hmmwv_tire.obj";
+const std::string HMMWV_Pac02Tire::m_meshFile_left = "hmmwv/hmmwv_tire_left.obj";
+const std::string HMMWV_Pac02Tire::m_meshFile_right = "hmmwv/hmmwv_tire_right.obj";
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-HMMWV_Pac02Tire::HMMWV_Pac02Tire(const std::string& name) : ChPac02Tire(name), m_use_vert_map(false) {}
+HMMWV_Pac02Tire::HMMWV_Pac02Tire(const std::string& name)
+    : ChPac02Tire(name), m_use_vert_map(false), m_use_bott_map(false) {}
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
@@ -169,27 +170,41 @@ void HMMWV_Pac02Tire::SetPac02Params() {
     // setting rolling coefficients
     m_PacCoeff.qsy1 = 0.015;
     m_PacCoeff.qsy2 = 0;
+    // setting bottoming table
+    m_use_bott_map = true;
+    m_bott_map.AddPoint(0, 0);
+    m_bott_map.AddPoint(0.09, 0);
+    m_bott_map.AddPoint(0.1, 100000);
+    m_bott_map.AddPoint(0.2, 200000);
+    m_bott_map.AddPoint(0.3, 300000);
+    m_bott_map.AddPoint(0.4, 400000);
+    m_bott_map.AddPoint(0.5, 500000);
+    m_bott_map.AddPoint(0.6, 600000);
+    m_bott_map.AddPoint(6, 6e+06);
 }
 
 double HMMWV_Pac02Tire::GetNormalStiffnessForce(double depth) const {
-    if (m_use_vert_map)
-        return m_vert_map.Get_y(depth);
-    else
-        return depth * m_PacCoeff.Cz;
-}
+    if (m_use_vert_map) {
+        if (m_use_bott_map) {
+            return m_vert_map.Get_y(depth) + m_bott_map.Get_y(depth);
+        } else {
+            return m_vert_map.Get_y(depth);
+        }
+    } else {
+        if (m_use_bott_map) {
+            return m_PacCoeff.Cz * depth + m_bott_map.Get_y(depth);
+        } else {
+            return m_PacCoeff.Cz * depth;
+        }
+    }
+}  // namespace hmmwv
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 void HMMWV_Pac02Tire::AddVisualizationAssets(VisualizationType vis) {
     if (vis == VisualizationType::MESH) {
-        auto trimesh = chrono_types::make_shared<geometry::ChTriangleMeshConnected>();
-        trimesh->LoadWavefrontMesh(vehicle::GetDataFile(m_meshFile), false, false);
-        trimesh->Transform(ChVector<>(0, GetOffset(), 0), ChMatrix33<>(1));
-        m_trimesh_shape = chrono_types::make_shared<ChTriangleMeshShape>();
-        m_trimesh_shape->SetMesh(trimesh);
-        m_trimesh_shape->SetName(m_meshName);
-        m_trimesh_shape->SetStatic(true);
-        m_wheel->GetSpindle()->AddAsset(m_trimesh_shape);
+        m_trimesh_shape = AddVisualizationMesh(vehicle::GetDataFile(m_meshFile_left),    // left side
+                                               vehicle::GetDataFile(m_meshFile_right));  // right side
     } else {
         ChPac02Tire::AddVisualizationAssets(vis);
     }
@@ -197,16 +212,9 @@ void HMMWV_Pac02Tire::AddVisualizationAssets(VisualizationType vis) {
 
 void HMMWV_Pac02Tire::RemoveVisualizationAssets() {
     ChPac02Tire::RemoveVisualizationAssets();
-
-    // Make sure we only remove the assets added by HMMWV_Pac02Tire::AddVisualizationAssets.
-    // This is important for the ChTire object because a wheel may add its own assets
-    // to the same body (the spindle/wheel).
-    auto& assets = m_wheel->GetSpindle()->GetAssets();
-    auto it = std::find(assets.begin(), assets.end(), m_trimesh_shape);
-    if (it != assets.end())
-        assets.erase(it);
+    RemoveVisualizationMesh(m_trimesh_shape);
 }
 
-}  // end namespace hmmwv
-}  // end namespace vehicle
+}  // namespace hmmwv
+}  // namespace vehicle
 }  // end namespace chrono

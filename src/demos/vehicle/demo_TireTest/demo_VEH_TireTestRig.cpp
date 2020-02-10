@@ -46,18 +46,17 @@ int main() {
 
     ChSystemNSC system;
 
-    system.SetMaxItersSolverSpeed(150);
-    system.SetMaxItersSolverStab(150);
-    system.SetMaxPenetrationRecoverySpeed(4.0);
     system.SetSolverType(ChSolver::Type::BARZILAIBORWEIN);
+    system.SetSolverMaxIterations(150);
+    system.SetMaxPenetrationRecoverySpeed(4.0);
 
     // Create wheel and tire subsystems
     // --------------------------------
 
-    auto wheel = chrono_types::make_shared<hmmwv::HMMWV_WheelLeft>("Wheel");
+    auto wheel = chrono_types::make_shared<hmmwv::HMMWV_Wheel>("Wheel");
 
     ////auto tire = chrono_types::make_shared<hmmwv::HMMWV_RigidTire>("Rigid tire");
-    /// auto tire = chrono_types::make_shared<hmmwv::HMMWV_TMeasyTire>("TMeasy tire");
+    ////auto tire = chrono_types::make_shared<hmmwv::HMMWV_TMeasyTire>("TMeasy tire");
     ////auto tire = chrono_types::make_shared<hmmwv::HMMWV_FialaTire>("Fiala tire");
     ////auto tire = chrono_types::make_shared<hmmwv::HMMWV_Pac89Tire>("Pac89 tire");
     ////auto tire = chrono_types::make_shared<hmmwv::HMMWV_Pac02Tire>("Pac02 tire");
@@ -65,9 +64,9 @@ int main() {
 
     ////std::string tire_file("hmmwv/tire/HMMWV_RigidTire.json");
     ////std::string tire_file("hmmwv/tire/HMMWV_FialaTire.json");
-    /// std::string tire_file("hmmwv/tire/HMMWV_TMeasyTire.json");
-    std::string tire_file("hmmwv/tire/HMMWV_Pac89Tire.json");
-    ////std::string tire_file("hmmwv/tire/HMMWV_Pac02Tire.json");
+    ////std::string tire_file("hmmwv/tire/HMMWV_TMeasyTire.json");
+    ////std::string tire_file("hmmwv/tire/HMMWV_Pac89Tire.json");
+    std::string tire_file("hmmwv/tire/HMMWV_Pac02Tire.json");
     auto tire = ReadTireJSON(vehicle::GetDataFile(tire_file));
 
     // Create and configure test rig

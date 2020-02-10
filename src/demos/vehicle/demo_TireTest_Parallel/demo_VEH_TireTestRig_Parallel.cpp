@@ -47,7 +47,6 @@ int main() {
     int max_threads = CHOMPfunctions::GetNumProcs();
     if (threads > max_threads)
         threads = max_threads;
-    system.SetParallelThreadNumber(threads);
     CHOMPfunctions::SetNumThreads(threads);
 #pragma omp parallel
 #pragma omp master
@@ -71,7 +70,7 @@ int main() {
     // Create wheel and tire subsystems
     // --------------------------------
 
-    auto wheel = chrono_types::make_shared<hmmwv::HMMWV_WheelLeft>("Wheel");
+    auto wheel = chrono_types::make_shared<hmmwv::HMMWV_Wheel>("Wheel");
     auto tire = chrono_types::make_shared<hmmwv::HMMWV_RigidTire>("Rigid tire");
 
     // Create and configure test rig

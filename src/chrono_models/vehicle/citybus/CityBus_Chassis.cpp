@@ -60,7 +60,6 @@ CityBus_Chassis::CityBus_Chassis(const std::string& name, bool fixed, ChassisCol
     m_vis_boxes.push_back(box1);
 
     m_has_mesh = true;
-    m_vis_mesh_name = "citybus_chassis_POV_geom";
     m_vis_mesh_file = "citybus/CityBus_Vis.obj";
 
     m_has_collision = (chassis_collision_type != ChassisCollisionType::NONE);
@@ -70,6 +69,8 @@ CityBus_Chassis::CityBus_Chassis(const std::string& name, bool fixed, ChassisCol
             break;
         case ChassisCollisionType::MESH:
             m_coll_mesh_names.push_back("citybus/CityBus_Col.obj");
+            break;
+        default:
             break;
     }
 }
